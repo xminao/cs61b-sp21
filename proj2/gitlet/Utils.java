@@ -152,6 +152,19 @@ class Utils {
         }
     }
 
+    static Object readObject(File file) {
+        try {
+            ObjectInputStream in =
+                    new ObjectInputStream(new FileInputStream(file));
+            Object obj = in.readObject();
+            in.close();
+            return obj;
+        } catch (IOException | ClassCastException
+                 | ClassNotFoundException excp) {
+            throw new IllegalArgumentException(excp.getMessage());
+        }
+    }
+
     /** Write OBJ to FILE. */
     static void writeObject(File file, Serializable obj) {
         writeContents(file, serialize(obj));

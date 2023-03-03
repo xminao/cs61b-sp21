@@ -30,15 +30,26 @@ public class Main {
                 validateNumArgs(args, 2);
                 Repository.add(args);
                 break;
-            case "date":
-                Commit commit = new Commit("xminao", "null", "date test");
-                commit.dateTest();
+            case "commit":
+                validateNumArgs(args, 2);
+                Repository.commit(args[1]);
+                break;
+            case "branch":
+                validateNumArgs(args, 2);
+                Repository.branch(args[1]);
+                break;
+            case "status":
+                validateNumArgs(args, 1);
+                Repository.status();
                 break;
             case "cat-file":
                 Repository.cat_file(args[1]);
                 break;
             case "ls-stage":
                 Repository.ls_stage();
+                break;
+            case "typeof":
+                System.out.println(Repository.typeOf(args[1]));
                 break;
             default:
                 System.out.println("No command with that name exists.");

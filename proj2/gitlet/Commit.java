@@ -1,10 +1,12 @@
 package gitlet;
 
-// TODO: any imports you need here
-
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
-import java.util.Date; // TODO: You'll likely use this in this class
+import java.util.Date;
 import java.util.TreeMap;
+
+import static gitlet.Repository.OBJECTS_DIR;
+import static gitlet.Utils.*;
 
 /** Represents a gitlet commit object.
  *  TODO: It's a good idea to give a description here of what else this Class
@@ -12,7 +14,7 @@ import java.util.TreeMap;
  *
  *  @author TODO
  */
-public class Commit {
+public class Commit extends GitletObject {
     /**
      * TODO: add instance variables here.
      *
@@ -28,7 +30,7 @@ public class Commit {
     private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
 
     /** The author of this Commit. */
-    private String author;
+    //private String author;
     /** The created date of this Commit. */
     private String date;
     /** The parent Commit of this Commit. */
@@ -39,17 +41,40 @@ public class Commit {
      * Directory structures mapping names to references to blobs
      * and other trees (subdirectories).
      */
-    private String tree;
+    private TreeMap<String, String> map;
 
     /* TODO: fill in the rest of this class. */
-    public Commit(String author, String parent, String message) {
-        this.author = author;
+    @SuppressWarnings("unchecked")
+    public Commit(String parent, String message) {
+        super("commit");
+        //this.author = author;
         this.date = simpleDateFormat.format(new Date());
         this.parent = parent;
         this.message = message;
+        map = readObject(join(OBJECTS_DIR, parent), TreeMap.class);
     }
 
-    public void dateTest() {
-        System.out.println(date);
+    /** Initial Commit. */
+    public Commit() {
+        super("commit");
+        this.date = simpleDateFormat.format(new Date(0));
+        this.parent = null;
+        this.message = "initial commit";
+        map = new TreeMap<>();
+    }
+
+    /**
+     * Returns the SHA-1 of this commit.
+     */
+    public String hash() {
+        return sha1(serialize(this));
+    }
+
+    @Override
+    public String toString() {
+        return "===" +
+                "commit " + hash() + '\n' +
+                "data " + date + '\n' +
+                "message " + message + '\n';
     }
 }

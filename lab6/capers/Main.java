@@ -65,8 +65,7 @@ public class Main {
         return;
     }
 
-    /**
-     * Checks the number of arguments versus the expected number,
+    /**    * Checks the number of arguments versus the expected number,
      * throws a RuntimeException if they do not match.
      *
      * @param cmd Name of command you are validating

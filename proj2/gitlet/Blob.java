@@ -2,12 +2,14 @@ package gitlet;
 
 import java.io.Serializable;
 
-public class Blob implements Serializable {
-    private String hashcode;
-    private String filename;
+public class Blob extends GitletObject {
 
-    public Blob(String hashcode, String filename) {
-        this.hashcode = hashcode;
-        this.filename = filename;
+    public Blob(byte[] contents) {
+        super("blob", contents);
+    }
+
+    @Override
+    public byte[] getContents() {
+        return super.getContents();
     }
 }
