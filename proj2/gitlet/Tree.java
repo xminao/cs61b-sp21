@@ -1,17 +1,18 @@
 package gitlet;
 
 import java.io.Serializable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
-public class Tree extends GitletObject implements Serializable {
+public class Tree extends GitletObject {
     // Mapping names to references to blobs and other trees
     private TreeMap<String, String> _mapping;
 
     // Constructor
     // Has the previous Tree.
     public Tree(Tree prev) {
-        super("tree");
+        super(Type.TREE);
         TreeMap<String, String> prev_map = prev.get_mapping();
         _mapping = new TreeMap<>();
         for (String key : prev_map.keySet()) {
@@ -20,7 +21,7 @@ public class Tree extends GitletObject implements Serializable {
     }
 
     public Tree() {
-        super("tree");
+        super(Type.TREE);
         _mapping = new TreeMap<>();
     }
 

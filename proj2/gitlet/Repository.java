@@ -35,7 +35,7 @@ public class Repository {
     /** The refs directory. */
     public static final File REFS_DIR = join(GITLET_DIR, "refs");
     /** The heads directory. */
-    public static final File BRANCH_DIR = join(REFS_DIR, "heads");
+    public static final File BRANCHES_DIR = join(REFS_DIR, "heads");
     /** The stage-area(index) file.*/
     public static final File STAGE_AREA = join(GITLET_DIR, "index");
     /** The HEAD file.
@@ -46,42 +46,40 @@ public class Repository {
      * Current branch.
      * master branch in default.
      */
-    public static String CURRENT_BRANCH;
+    //public static String CURRENT_BRANCH;
 
     /**
      * Creates a new Gitlet version-control system in the current directory.
      * Initialize .gitlet dir and objects dir.
      */
     public static void init() {
+        validateNotRepo();
+
         GITLET_DIR.mkdir();
         OBJECTS_DIR.mkdir();
         REFS_DIR.mkdir();
-        BRANCH_DIR.mkdir();
+        BRANCHES_DIR.mkdir();
 
-        CURRENT_BRANCH = "master";
-        File branch = join(BRANCH_DIR, CURRENT_BRANCH);
         try {
             STAGE_AREA.createNewFile();
             HEAD_FILE.createNewFile();
-            branch.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         // Initialize Commit.
         Commit init_commit = new Commit();
-        byte[] contents = serialize(init_commit);
-        String hashcode = sha1(contents);
-        addObjToDatabase(hashcode, contents);
-        System.out.println("commit hashcode: " + hashcode);
-        writeContents(branch, hashcode);
-        writeContents(HEAD_FILE, branch.getAbsolutePath());
+        String hashcode = addObjToDatabase(init_commit);
+        System.out.println("init commit hashcode: " + hashcode);
+        initBranch("master", init_commit);
+        setHEAD("master");
+        System.out.println(getHEAD());
 
         // Initialize stage-area
-        Tree stage_tree = new Tree();
-        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
-        System.out.println("initial stage tree:" + sha1(serialize(stage_tree)));
-        writeContents(STAGE_AREA, sha1(serialize(stage_tree)));
+//        Tree stage_tree = new Tree();
+//        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
+//        System.out.println("initial stage tree:" + sha1(serialize(stage_tree)));
+//        writeContents(STAGE_AREA, sha1(serialize(stage_tree)));
     }
 
     /**
@@ -90,29 +88,25 @@ public class Repository {
      */
     public static void add(String... args) {
         validateRepo();
-
         String filename = args[1];
-        List<String> file_list = Utils.plainFilenamesIn(CWD);
-        if (!file_list.contains(filename)) {
-            System.out.println("File does not exist.");
-            System.exit(0);
-        }
+        validateFile(filename);
 
-        String stage_hashcode = readContentsAsString(STAGE_AREA);
-        Tree prev_tree = readObject(join(OBJECTS_DIR, stage_hashcode), Tree.class);
-        Tree stage_tree = new Tree(prev_tree);
 
-        // Using Blob Object.
-        byte[] contents = readContents(join(CWD, filename));
-        Blob blob = new Blob(contents);
-        addObjToDatabase(sha1(serialize(blob)), serialize(blob));
-        stage_tree.add(filename, sha1(serialize(blob)));
-        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
-        System.out.println("blob hashcode:  " + sha1(serialize(blob)));
-        System.out.println("stage tree hashcode: " + sha1(serialize(stage_tree)));
-
-        // Update stage-area
-        updateStage(sha1(serialize(stage_tree)));
+//        String stage_hashcode = readContentsAsString(STAGE_AREA);
+//        Tree prev_tree = readObject(join(OBJECTS_DIR, stage_hashcode), Tree.class);
+//        Tree stage_tree = new Tree(prev_tree);
+//
+//        // Using Blob Object.
+//        byte[] contents = readContents(join(CWD, filename));
+//        Blob blob = new Blob(contents);
+//        addObjToDatabase(sha1(serialize(blob)), serialize(blob));
+//        stage_tree.add(filename, sha1(serialize(blob)));
+//        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
+//        System.out.println("blob hashcode:  " + sha1(serialize(blob)));
+//        System.out.println("stage tree hashcode: " + sha1(serialize(stage_tree)));
+//
+//        // Update stage-area
+//        updateStage(sha1(serialize(stage_tree)));
     }
 
     private static void updateStage(String hashcode) {
@@ -142,13 +136,6 @@ public class Repository {
      */
     public static void status() {
         System.out.println("=== Branches ===");
-        for (String branch : branchList()) {
-            if (branch.equals(CURRENT_BRANCH)) {
-                System.out.println("*" + branch);
-            } else {
-                System.out.println(branch);
-            }
-        }
         System.out.println("\n" + "=== Staged Files ===");
         ls_stage();
         System.out.println("\n" + "=== Removed Files ===");
@@ -157,22 +144,61 @@ public class Repository {
     }
 
     /**
+     * Checkout is a kind of general command that can do a few different things depending on what its arguments are.
+     *
+     * 1. checkout -- [file name]
+     *
+     *  Takes the version of the file as it exists in the head commit and puts it in the working directory,
+     *  overwriting the version of the file that’s already there if there is one. The new version of the file
+     *  is not staged.
+     *
+     *
+     * 2. checkout [commit id] -- [file name]
+     *
+     *  Takes the version of the file as it exists in the commit with the given id, and puts it in the working directory,
+     *  overwriting the version of the file that’s already there if there is one. The new version of the file is not staged.
+     *
+     *
+     * 3. java gitlet.Main checkout [branch name]
+     *
+     *  Takes all files in the commit at the head of the given branch, and puts them in the working directory,
+     *  overwriting the versions of the files that are already there if they exist. Also, at the end of this command,
+     *  the given branch will now be considered the current branch (HEAD). Any files that are tracked in the current
+     *  branch but are not present in the checked-out branch are deleted. The staging area is cleared, unless the
+     *  checked-out branch is the current branch
+     */
+    public static void check_out(String... args) {
+        // checkout [branch name]
+        if(args.length == 1) {
+
+        }
+    }
+
+
+
+    /**
      * Creates a new branch with the given name, and points it at the current head commit.
      */
     public static void branch(String branch) {
-        File f = join(BRANCH_DIR, branch);
+        File f = join(BRANCHES_DIR, branch);
         if (f.exists() && f.isFile()) {
             System.out.println("A branch with that name already exists.");
             System.exit(0);
         }
         try {
-            if (f.createNewFile()) {
-                CURRENT_BRANCH = branch;
-                writeContents(HEAD_FILE, f.getAbsolutePath());
-            }
+            f.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Initial branch (master).
+     */
+    public static void initBranch(String branch, Commit commit) {
+        branch(branch);
+        File f = join(BRANCHES_DIR, branch);
+        writeContents(f, sha1(serialize(commit)));
     }
 
     /**
@@ -180,8 +206,8 @@ public class Repository {
      */
     private static List<String> branchList() {
         List<String> list = new ArrayList<>();
-        if (BRANCH_DIR.exists() && BRANCH_DIR.isDirectory()) {
-            File[] files = BRANCH_DIR.listFiles();
+        if (BRANCHES_DIR.exists() && BRANCHES_DIR.isDirectory()) {
+            File[] files = BRANCHES_DIR.listFiles();
             if (files != null) {
                 for (File f : files) {
                     list.add(f.getName());
@@ -254,7 +280,7 @@ public class Repository {
     }
 
     /**
-     * Is current working directory is git repository.
+     * Validate current working directory is a repository. (for all gitlet operations in addition to init)
      * Exit if not.
      */
     public static void validateRepo() {
@@ -265,13 +291,42 @@ public class Repository {
     }
 
     /**
-     * Is object in objects-database.
+     * Validate current working directory is not a repository. (for init)
+     * Exit if is.
+     */
+    public static void validateNotRepo() {
+        if (GITLET_DIR.exists()) {
+            System.out.println("A Gitlet version-control system already exists in the current directory.");
+            System.exit(0);
+        }
+    }
+
+    /**
+     * validate object:hashcode in objects-database.
      * Exit if not.
      */
     public static void validateObj(String hashcode) {
         File obj_f = join(OBJECTS_DIR, hashcode);
         if (!obj_f.exists()) {
             System.out.println("Not a valid object name.");
+            System.exit(0);
+        }
+    }
+
+    /**
+     * Validate file:filename in CWD.
+     * Exist if not.
+     * Omit the subdirectory
+     */
+    public static void validateFile(String filename) {
+        List<String> file_list = plainFilenamesIn(CWD);
+        if (file_list != null) {
+            for (String file : file_list) {
+                System.out.println(file);
+            }
+        }
+        if (file_list == null || !file_list.contains(filename)) {
+            System.out.println("File does not exist.");
             System.exit(0);
         }
     }
@@ -309,4 +364,37 @@ public class Repository {
         writeContents(obj_f, contents);
     }
 
+    public static String addObjToDatabase(GitletObject obj) {
+        byte[] contents = serialize(obj);
+        String hashcode = sha1(contents);
+
+        File obj_f = join(OBJECTS_DIR, hashcode);
+        if (!obj_f.exists()) {
+            try {
+                obj_f.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        writeContents(obj_f, contents);
+
+        return hashcode;
+    }
+
+    /**
+     * Update HEAD point to the new branch ref.
+     */
+    public static void setHEAD(String ref) {
+        String head = "ref: refs/heads/" + ref;
+        writeContents(HEAD_FILE, head);
+    }
+
+    /**
+     * Returns the HEAD pointer branch.
+     */
+    public static String getHEAD() {
+        String head = readContentsAsString(HEAD_FILE);
+        String[] list = head.split("/");
+        return list[list.length - 1];
+    }
 }

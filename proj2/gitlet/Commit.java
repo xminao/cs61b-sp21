@@ -41,26 +41,31 @@ public class Commit extends GitletObject {
      * Directory structures mapping names to references to blobs
      * and other trees (subdirectories).
      */
-    private TreeMap<String, String> map;
+    private Tree tree;
 
     /* TODO: fill in the rest of this class. */
     @SuppressWarnings("unchecked")
-    public Commit(String parent, String message) {
-        super("commit");
+    public Commit(String parent, String message, Tree tree) {
+        super(Type.COMMIT);
         //this.author = author;
         this.date = simpleDateFormat.format(new Date());
         this.parent = parent;
         this.message = message;
-        map = readObject(join(OBJECTS_DIR, parent), TreeMap.class);
+        //tree = readObject(join(OBJECTS_DIR, parent), Commit.class).getTree();
+        this.tree = tree;
     }
 
     /** Initial Commit. */
     public Commit() {
-        super("commit");
+        super(Type.COMMIT);
         this.date = simpleDateFormat.format(new Date(0));
         this.parent = null;
         this.message = "initial commit";
-        map = new TreeMap<>();
+        tree = new Tree();
+    }
+
+    public Tree getTree() {
+        return tree;
     }
 
     /**

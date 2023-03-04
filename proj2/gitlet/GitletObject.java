@@ -1,28 +1,20 @@
 package gitlet;
 
-import java.io.File;
 import java.io.Serializable;
 
-import static gitlet.Utils.*;
-
 public class GitletObject implements Serializable {
-    private String type;
-    private byte[] contents;
-
-    public GitletObject(String type, byte[] contents) {
-        this.type = type;
-        this.contents = contents;
+    enum Type {
+        BLOB,
+        TREE,
+        COMMIT
     }
+    private Type type;
 
-    public GitletObject(String type) {
+    public GitletObject(Type type) {
         this.type = type;
     }
 
     public String getType() {
-        return type;
-    }
-
-    public byte[] getContents() {
-        return contents;
+        return type.toString().toLowerCase();
     }
 }
