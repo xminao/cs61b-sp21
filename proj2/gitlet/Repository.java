@@ -67,13 +67,12 @@ public class Repository {
             e.printStackTrace();
         }
 
-        // Initialize Commit.
+        // Initialize Empty Commit. (first commit)
         Commit init_commit = new Commit();
         String hashcode = addObjToDatabase(init_commit);
         System.out.println("init commit hashcode: " + hashcode);
         initBranch("master", init_commit);
-        setHEAD("master");
-        System.out.println(getHEAD());
+        System.out.println("current branch: " + getHeadRef());
 
         // Initialize stage-area
 //        Tree stage_tree = new Tree();
@@ -90,6 +89,19 @@ public class Repository {
         validateRepo();
         String filename = args[1];
         validateFile(filename);
+
+        Tree cache_tree = new Tree();
+        Tree tracked = getHeadCommit().getTree();
+
+        File file = join(CWD, filename);
+        Blob blob = new Blob(file);
+        String hashcode = addObjToDatabase(blob);
+        System.out.println("added file hashcode: " + hashcode);
+
+        cache_tree.add(filename, hashcode);
+        String cache_tree_hashcode = addObjToDatabase(cache_tree);
+        updateStage(cache_tree_hashcode);
+        System.out.println("stage-area tree hashcode: " + cache_tree_hashcode);
 
 
 //        String stage_hashcode = readContentsAsString(STAGE_AREA);
@@ -199,6 +211,7 @@ public class Repository {
         branch(branch);
         File f = join(BRANCHES_DIR, branch);
         writeContents(f, sha1(serialize(commit)));
+        setHeadRef(branch);
     }
 
     /**
@@ -223,13 +236,15 @@ public class Repository {
     public static void cat_file(String hashcode) {
         validateObj(hashcode);
 
-        String type = typeOf(hashcode);
-        if (type.equals("tree")) {
-            listOfTree(hashcode);
-        } else {
-            byte[] read = Utils.readContents(join(OBJECTS_DIR, hashcode));
-            System.out.println(new String(read));
-        }
+//        String type = typeOf(hashcode);
+//        if (type.equals("tree")) {
+//            listOfTree(hashcode);
+//        } else {
+//            byte[] read = Utils.readContents(join(OBJECTS_DIR, hashcode));
+//            System.out.println(new String(read));
+//        }
+        GitletObject obj = readObject(join(OBJECTS_DIR, hashcode), GitletObject.class);
+        System.out.println(obj);
     }
 
     private static void listOfTree(String hashcode) {
@@ -375,6 +390,9 @@ public class Repository {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        } else {
+            System.out.println("Object exist.");
+            System.exit(0);
         }
         writeContents(obj_f, contents);
 
@@ -382,19 +400,28 @@ public class Repository {
     }
 
     /**
-     * Update HEAD point to the new branch ref.
+     * Set the ref of HEAD pointer branch.
      */
-    public static void setHEAD(String ref) {
+    public static void setHeadRef(String ref) {
         String head = "ref: refs/heads/" + ref;
         writeContents(HEAD_FILE, head);
     }
 
     /**
-     * Returns the HEAD pointer branch.
+     * Returns the ref of HEAD pointer branch.
      */
-    public static String getHEAD() {
+    public static String getHeadRef() {
         String head = readContentsAsString(HEAD_FILE);
         String[] list = head.split("/");
         return list[list.length - 1];
+    }
+
+    /**
+     * Returns the commit of current HEAD pointer.
+     */
+    public static Commit getHeadCommit() {
+        String hashcode = readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
+        Commit commit = readObject(join(OBJECTS_DIR, hashcode), Commit.class);
+        return commit;
     }
 }

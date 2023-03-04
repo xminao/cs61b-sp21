@@ -1,8 +1,5 @@
 package gitlet;
 
-import java.io.Serializable;
-import java.util.Iterator;
-import java.util.List;
 import java.util.TreeMap;
 
 public class Tree extends GitletObject {
@@ -31,5 +28,15 @@ public class Tree extends GitletObject {
 
     public void add(String name, String hashcode) {
         _mapping.put(name, hashcode);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder out = new StringBuilder();
+        for (String key : _mapping.keySet()) {
+            out.append(getType()).append(" ").append(_mapping.get(key)).append(" ").append(key);
+            out.append("\n");
+        }
+        return out.toString();
     }
 }

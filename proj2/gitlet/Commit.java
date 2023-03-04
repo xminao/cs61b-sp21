@@ -77,7 +77,7 @@ public class Commit extends GitletObject {
 
     @Override
     public String toString() {
-        return "===" +
+        return "===" + '\n' +
                 "commit " + hash() + '\n' +
                 "data " + date + '\n' +
                 "message " + message + '\n';
