@@ -113,13 +113,25 @@ public class Repository {
      * is said to be tracking the saved files.
      */
     public static void commit(String message) {
-        // Get the current HEAD pointer.
-        File f = new File(readContentsAsString(HEAD_FILE));
-        String parent_hashcode = readContentsAsString(f);
+        // Get the current HEAD commit.
+        Commit HEAD = getHeadCommit();
 
-        // Get the parent commit of current HEAD.
-        Commit parent = readObject(join(OBJECTS_DIR, parent_hashcode), Commit.class);
-        System.out.println(parent.toString());
+        // generate new root tree.
+        Tree root = Index.generateCommitTree();
+
+        // do not commit if generate tree same as parent commit
+        if (root.equals(HEAD.getTree())) {
+            return;
+        }
+
+        // new commit
+        Commit newCommit = new Commit(getHeadCommitID(), message, root);
+        String objID = addObjToDatabase(newCommit);
+        setHeadCommitID(objID);
+        System.out.println("new commit objID: " + objID);
+
+        // clean the stage-area.
+        Index.cleanIndex();
     }
 
     /**
@@ -238,41 +250,6 @@ public class Repository {
         GitletObject obj = readObject(join(OBJECTS_DIR, hashcode), GitletObject.class);
         System.out.println(obj);
     }
-
-    private static void listOfTree(String hashcode) {
-        validateObj(hashcode);
-
-        File obj_t = join(OBJECTS_DIR, hashcode);
-        Tree tree = readObject(obj_t, Tree.class);
-        TreeMap<String, String> map = tree.get_mapping();
-        for (String key : map.keySet()) {
-            System.out.println(Repository.typeOf(map.get(key)) + " " +
-                    map.get(key) + " " +
-                    key);
-        }
-    }
-
-    /**
-     * List mapping in stage-area.
-     */
-    public static void ls_stage() {
-//        TreeMap<String, String> map = stage_map();
-//        for (String key : map.keySet()) {
-//            System.out.println(map.get(key) + " " + key);
-//        }
-        if (STAGE_AREA.length() != 0) {
-            cat_file(readContentsAsString(STAGE_AREA));
-        }
-    }
-
-    /**
-     * Returns the map of stage-area file.
-     */
-    @SuppressWarnings("unchecked")
-//    private static TreeMap<String, String> stage_map() {
-//        String stage_hashcode = readContentsAsString(STAGE_AREA);
-//        return readObject(join(OBJECTS_DIR, stage_hashcode));
-//    }
 
     /**
      * Returns the type(tree or blob) of SHA-1 object.
@@ -413,32 +390,16 @@ public class Repository {
     }
 
     /**
-     * Returns tree of stage-area.
-     * @return
+     * Set the commit ID of HEAD pointer.
      */
-    public static Tree getStagedTree() {
-        Tree cache_tree;
-        // is stage-area empty.
-        if (STAGE_AREA.length() == 0) {
-            cache_tree = new Tree();
-        } else {
-            Tree prev = readObject(join(OBJECTS_DIR, readContentsAsString(STAGE_AREA)), Tree.class);
-            cache_tree = new Tree(prev);
-        }
-        return cache_tree;
+    public static void setHeadCommitID(String objID) {
+        validateObj(objID);
+        writeContents(join(BRANCHES_DIR, getHeadRef()), objID);
     }
-
     /**
-     * Determine the file is tracked or not.
+     * Returns the ObjID of current HEAD commit.
      */
-    public static boolean isTracked(String filename) {
-        Tree tracked_tree = getHeadCommit().getTree();
-        TreeMap<String, String> map = tracked_tree.get_mapping();
-        for (String key : map.keySet()) {
-            if (key.equals(filename)) {
-                return true;
-            }
-        }
-        return false;
+    public static String getHeadCommitID() {
+        return readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
     }
 }

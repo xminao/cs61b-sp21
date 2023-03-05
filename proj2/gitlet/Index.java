@@ -30,6 +30,9 @@ public class Index {
 
     public static final File INDEX_AREA = Repository.STAGE_AREA;
 
+    /**
+     * Initial the index (staged-area).
+     */
     public static void initIndex() {
         IndexTree index_tree = new IndexTree();
         try {
@@ -40,6 +43,10 @@ public class Index {
         saveIndexTree(index_tree);
     }
 
+    /**
+     * Add a file to index.
+     * do nothing if same file is staged.
+     */
     public static void addIndex(File file) {
         String filename = file.getName();
 
@@ -53,9 +60,9 @@ public class Index {
         // index tree (stage-area tree).
         IndexTree index_tree = getIndexTree();
 
-        // hash file.
+        // hash file and add to database.
         //String objID = Repository.addObjToDatabase(blob);
-        String objID = Repository.hashObj(new Blob(file));
+        String objID = Repository.addObjToDatabase(new Blob(file));
 
         // file be tracked in HEAD commit.
         if (HEAD_tree.has(filename)) {
@@ -72,6 +79,10 @@ public class Index {
         saveIndexTree(index_tree);
     }
 
+    /**
+     * Unstage the file if it is currently staged for addition. If the file is tracked in the current commit,
+     * stage it for removal and remove the file from the working directory if the user has not already done so
+     */
     public static void delIndex(String filename) {
         // HEAD commit root tree.
         Tree HEAD_tree = Repository.getHeadCommit().getTree();
@@ -90,12 +101,36 @@ public class Index {
         saveIndexTree(index_tree);
     }
 
-    public static Tree generateIndexTree() {
-        return null;
+    /**
+     * Clean the Index (stage-area)
+     * generally after commit.
+     */
+    public static void cleanIndex() {
+        IndexTree tree = new IndexTree();
+        saveIndexTree(tree);
     }
 
+    /**
+     * Generate root tree for commit.
+     * @return
+     */
     public static Tree generateCommitTree() {
-        return null;
+        // HEAD commit root tree.
+        Tree HEAD_tree = Repository.getHeadCommit().getTree();
+        // index tree (stage-area tree).
+        IndexTree index_tree = getIndexTree();
+        // root tree for commit
+        // (initialize with copy of HEAD commit tree)
+        Tree root = new Tree(HEAD_tree);
+        for (String filename : index_tree) {
+            State state = index_tree.getState(filename);
+            if (state.equals(State.DELETED)) {
+                root.del(filename);
+            } else {
+                root.add(filename, index_tree.getObjID(filename));
+            }
+        }
+        return root;
     }
 
     /**
