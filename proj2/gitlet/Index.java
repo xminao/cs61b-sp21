@@ -105,7 +105,7 @@ public class Index {
      * Clean the Index (stage-area)
      * generally after commit.
      */
-    public static void cleanIndex() {
+    public static void clearIndex() {
         IndexTree tree = new IndexTree();
         saveIndexTree(tree);
     }

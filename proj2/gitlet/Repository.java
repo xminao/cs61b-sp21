@@ -67,19 +67,17 @@ public class Repository {
             e.printStackTrace();
         }
 
-        // Initialize Empty Commit. (first commit)
+        // Initialize root commit (empty commit)
         Commit init_commit = new Commit();
         String hashcode = addObjToDatabase(init_commit);
         System.out.println("init commit hashcode: " + hashcode);
+
+        // Initialize default branch : master
         initBranch("master", init_commit);
         System.out.println("current branch: " + getHeadRef());
 
         // Initialize stage-area
         Index.initIndex();
-//        Tree stage_tree = new Tree();
-//        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
-//        System.out.println("initial stage tree:" + sha1(serialize(stage_tree)));
-//        writeContents(STAGE_AREA, sha1(serialize(stage_tree)));
     }
 
     /**
@@ -131,7 +129,7 @@ public class Repository {
         System.out.println("new commit objID: " + objID);
 
         // clean the stage-area.
-        Index.cleanIndex();
+        Index.clearIndex();
     }
 
     /**
@@ -141,6 +139,13 @@ public class Repository {
      */
     public static void status() {
         System.out.println("=== Branches ===");
+        for (String branch : branchList()) {
+            if (branch.equals(getHeadRef())) {
+                System.out.println("*" + branch);
+            } else {
+                System.out.println(branch);
+            }
+        }
         System.out.println("\n" + "=== Staged Files ===");
         for (String filename : Index.stagedList()) {
             System.out.println(filename);
@@ -163,25 +168,22 @@ public class Repository {
      * Checkout is a kind of general command that can do a few different things depending on what its arguments are.
      *
      * 1. checkout -- [file name]
-     *
-     *  Takes the version of the file as it exists in the head commit and puts it in the working directory,
-     *  overwriting the version of the file that’s already there if there is one. The new version of the file
-     *  is not staged.
+     *      Takes the version of the file as it exists in the head commit and puts it in the working directory,
+     *      overwriting the version of the file that’s already there if there is one. The new version of the file
+     *      is not staged.
      *
      *
      * 2. checkout [commit id] -- [file name]
+     *      Takes the version of the file as it exists in the commit with the given id, and puts it in the working directory,
+     *      overwriting the version of the file that’s already there if there is one. The new version of the file is not staged.
      *
-     *  Takes the version of the file as it exists in the commit with the given id, and puts it in the working directory,
-     *  overwriting the version of the file that’s already there if there is one. The new version of the file is not staged.
      *
-     *
-     * 3. java gitlet.Main checkout [branch name]
-     *
-     *  Takes all files in the commit at the head of the given branch, and puts them in the working directory,
-     *  overwriting the versions of the files that are already there if they exist. Also, at the end of this command,
-     *  the given branch will now be considered the current branch (HEAD). Any files that are tracked in the current
-     *  branch but are not present in the checked-out branch are deleted. The staging area is cleared, unless the
-     *  checked-out branch is the current branch
+     * 3. checkout [branch name]
+     *      Takes all files in the commit at the head of the given branch, and puts them in the working directory,
+     *      overwriting the versions of the files that are already there if they exist. Also, at the end of this command,
+     *      the given branch will now be considered the current branch (HEAD). Any files that are tracked in the current
+     *      branch but are not present in the checked-out branch are deleted. The staging area is cleared, unless the
+     *      checked-out branch is the current branch
      */
     public static void check_out(String... args) {
         // checkout [branch name]
@@ -224,10 +226,10 @@ public class Repository {
     private static List<String> branchList() {
         List<String> list = new ArrayList<>();
         if (BRANCHES_DIR.exists() && BRANCHES_DIR.isDirectory()) {
-            File[] files = BRANCHES_DIR.listFiles();
-            if (files != null) {
-                for (File f : files) {
-                    list.add(f.getName());
+            List<String> branches = plainFilenamesIn(BRANCHES_DIR);
+            if (branches != null) {
+                for (String name : branches) {
+                    list.add(name);
                 }
             }
         }
