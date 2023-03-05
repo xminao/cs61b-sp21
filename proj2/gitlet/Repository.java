@@ -75,6 +75,7 @@ public class Repository {
         System.out.println("current branch: " + getHeadRef());
 
         // Initialize stage-area
+        Index.initIndex();
 //        Tree stage_tree = new Tree();
 //        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
 //        System.out.println("initial stage tree:" + sha1(serialize(stage_tree)));
@@ -85,29 +86,13 @@ public class Repository {
      * Adds a copy of the file as it currently exists to the staging area.
      * Get a new stage tree(extends prev stage tree) when operated.
      */
-    public static void add(String... args) {
+    public static void add(String filename) {
         validateRepo();
-        String filename = args[1];
         validateFile(filename);
 
-        Index.add(filename);
-
-//        // tracked files in current commit.
-//        Tree tracked = getHeadCommit().getTree();
-//        Tree cache_tree = getStagedTree();
-//
-//        // add file to database.
-//        File file = join(CWD, filename);
-//        Blob blob = new Blob(file);
-//        String hashcode = addObjToDatabase(blob);
-//        System.out.println("added file hashcode: " + hashcode);
-//
-//        // is file not equals to tracked file.
-//        if (!tracked.has(filename, hashcode)) {
-//            cache_tree.add(filename, hashcode);
-//            updateStage(cache_tree);
-//        }
-
+        // add file to index(stage area).
+        File file = join(CWD, filename);
+        Index.addIndex(file);
     }
 
     /**
@@ -117,14 +102,9 @@ public class Repository {
      */
     public static void rm(String filename) {
         validateRepo();
-        Index.rm(filename);
-    }
 
-    private static void updateStage(Tree tree) {
-        String cache_tree_hashcode = addObjToDatabase(tree);
-        writeContents(STAGE_AREA, cache_tree_hashcode);
-        // **
-        System.out.println("stage-area tree hashcode: " + cache_tree_hashcode);
+        // del file in index(stage area).
+        Index.delIndex(filename);
     }
 
     /**
@@ -150,10 +130,21 @@ public class Repository {
     public static void status() {
         System.out.println("=== Branches ===");
         System.out.println("\n" + "=== Staged Files ===");
-        ls_stage();
+        for (String filename : Index.stagedList()) {
+            System.out.println(filename);
+        }
         System.out.println("\n" + "=== Removed Files ===");
+        for (String filename : Index.removedList()) {
+            System.out.println(filename);
+        }
         System.out.println("\n" + "=== Modifications Not Staged For Commit ===");
+        for (String filename : Index.notStagedList()) {
+            System.out.println(filename);
+        }
         System.out.println("\n" + "=== Untracked Files ===");
+        for (String filename : Index.untrackedList()) {
+            System.out.println(filename);
+        }
     }
 
     /**

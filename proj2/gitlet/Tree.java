@@ -1,8 +1,9 @@
 package gitlet;
 
+import java.util.Iterator;
 import java.util.TreeMap;
 
-public class Tree extends GitletObject {
+public class Tree extends GitletObject implements Iterable<String> {
     // Mapping names to references to blobs and other trees
     private TreeMap<String, String> _mapping;
 
@@ -58,5 +59,10 @@ public class Tree extends GitletObject {
             out.append("\n");
         }
         return out.toString();
+    }
+
+    @Override
+    public Iterator<String> iterator() {
+        return _mapping.keySet().iterator();
     }
 }

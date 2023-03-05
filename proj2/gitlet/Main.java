@@ -21,14 +21,12 @@ public class Main {
         String firstArg = args[0];
         switch(firstArg) {
             case "init":
-                // TODO: handle the `init` command
                 validateNumArgs(args, 1);
                 Repository.init();
                 break;
             case "add":
-                // TODO: handle the `add [filename]` command
                 validateNumArgs(args, 2);
-                Repository.add(args);
+                Repository.add(args[1]);
                 break;
             case "commit":
                 validateNumArgs(args, 2);
@@ -53,7 +51,6 @@ public class Main {
             case "ls-stage":
                 validateNumArgs(args, 1);
                 //Repository.ls_stage();
-                Index.ls_stage();
                 break;
             case "typeof":
                 validateNumArgs(args, 2);

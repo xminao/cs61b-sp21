@@ -1,18 +1,22 @@
 package gitlet;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.TreeMap;
 
-public class IndexTree implements Serializable {
+public class IndexTree implements Serializable, Iterable<String> {
+
     private class Record implements Serializable {
-        private Index.Status status;
+        private Index.State state;
         private String objID;
-        public Record(Index.Status status, String objID) {
-            this.status = status;
+        public Record(Index.State status, String objID) {
+            this.state = status;
             this.objID = objID;
         }
-        public Index.Status getStatus() {
-            return status;
+        public Index.State getState() {
+            return state;
         }
         public String getObjID() {
             return objID;
@@ -29,7 +33,7 @@ public class IndexTree implements Serializable {
         return _mapping;
     }
 
-    public void add(String filename, Index.Status status, String objID) {
+    public void add(String filename, Index.State status, String objID) {
         Record record = new Record(status, objID);
         _mapping.put(filename, record);
     }
@@ -47,6 +51,13 @@ public class IndexTree implements Serializable {
         return null;
     }
 
+    public Index.State getState(String name) {
+        if (has(name)) {
+            return _mapping.get(name).getState();
+        }
+        return null;
+    }
+
     public boolean has(String filename) {
         return _mapping.containsKey(filename);
     }
@@ -55,19 +66,41 @@ public class IndexTree implements Serializable {
         if (!has(filename)) {
             return false;
         }
-        return _mapping.get(filename).getObjID().equals(objID);
+        return getObjID(filename).equals(objID);
+    }
+
+    /**
+     * Returns file name list by state (new file, deleted, modified).
+     */
+    public List<String> listByState(Index.State state) {
+        List<String> list = new ArrayList<>();
+        for (String filename : this) {
+            if (get_mapping().get(filename).getState().equals(state)) {
+                list.add(filename);
+            }
+        }
+        return list;
     }
 
     @Override
     public String toString() {
         StringBuilder out = new StringBuilder();
-        for (String key : _mapping.keySet()) {
-            if (!_mapping.get(key).getStatus().equals(Index.Status.DELETED)) {
-                out.append(getObjID(key));
-                out.append(" ").append(key);
-                out.append("\n");
-            }
+        for (String key : this) {
+//            if (!_mapping.get(key).getState().equals(Index.State.DELETED)) {
+//                out.append(getObjID(key));
+//                out.append(" ").append(key);
+//                out.append("\n");
+//            }
+            out.append(_mapping.get(key).getState().toString());
+            out.append(": ");
+            out.append(key);
+            out.append("\n");
         }
         return out.toString();
+    }
+
+    @Override
+    public Iterator<String> iterator() {
+        return _mapping.keySet().iterator();
     }
 }
