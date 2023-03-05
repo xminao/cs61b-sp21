@@ -61,7 +61,7 @@ public class Repository {
         BRANCHES_DIR.mkdir();
 
         try {
-            STAGE_AREA.createNewFile();
+            //STAGE_AREA.createNewFile();
             HEAD_FILE.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
@@ -90,40 +90,41 @@ public class Repository {
         String filename = args[1];
         validateFile(filename);
 
-        Tree cache_tree = new Tree();
-        Tree tracked = getHeadCommit().getTree();
+        Index.add(filename);
 
-        File file = join(CWD, filename);
-        Blob blob = new Blob(file);
-        String hashcode = addObjToDatabase(blob);
-        System.out.println("added file hashcode: " + hashcode);
-
-        cache_tree.add(filename, hashcode);
-        String cache_tree_hashcode = addObjToDatabase(cache_tree);
-        updateStage(cache_tree_hashcode);
-        System.out.println("stage-area tree hashcode: " + cache_tree_hashcode);
-
-
-//        String stage_hashcode = readContentsAsString(STAGE_AREA);
-//        Tree prev_tree = readObject(join(OBJECTS_DIR, stage_hashcode), Tree.class);
-//        Tree stage_tree = new Tree(prev_tree);
+//        // tracked files in current commit.
+//        Tree tracked = getHeadCommit().getTree();
+//        Tree cache_tree = getStagedTree();
 //
-//        // Using Blob Object.
-//        byte[] contents = readContents(join(CWD, filename));
-//        Blob blob = new Blob(contents);
-//        addObjToDatabase(sha1(serialize(blob)), serialize(blob));
-//        stage_tree.add(filename, sha1(serialize(blob)));
-//        addObjToDatabase(sha1(serialize(stage_tree)), serialize(stage_tree));
-//        System.out.println("blob hashcode:  " + sha1(serialize(blob)));
-//        System.out.println("stage tree hashcode: " + sha1(serialize(stage_tree)));
+//        // add file to database.
+//        File file = join(CWD, filename);
+//        Blob blob = new Blob(file);
+//        String hashcode = addObjToDatabase(blob);
+//        System.out.println("added file hashcode: " + hashcode);
 //
-//        // Update stage-area
-//        updateStage(sha1(serialize(stage_tree)));
+//        // is file not equals to tracked file.
+//        if (!tracked.has(filename, hashcode)) {
+//            cache_tree.add(filename, hashcode);
+//            updateStage(cache_tree);
+//        }
+
     }
 
-    private static void updateStage(String hashcode) {
-        validateObj(hashcode);
-        writeContents(STAGE_AREA, hashcode);
+    /**
+     * Unstage the file if it is currently staged for addition. If the file is tracked in the current commit,
+     * stage it for removal and remove the file from the working directory if the user has not already done so
+     * (do not remove it unless it is tracked in the current commit).
+     */
+    public static void rm(String filename) {
+        validateRepo();
+        Index.rm(filename);
+    }
+
+    private static void updateStage(Tree tree) {
+        String cache_tree_hashcode = addObjToDatabase(tree);
+        writeContents(STAGE_AREA, cache_tree_hashcode);
+        // **
+        System.out.println("stage-area tree hashcode: " + cache_tree_hashcode);
     }
 
     /**
@@ -268,10 +269,8 @@ public class Repository {
 //        for (String key : map.keySet()) {
 //            System.out.println(map.get(key) + " " + key);
 //        }
-        String stage_hashcode = readContentsAsString(STAGE_AREA);
-        Tree tree = readObject(join(OBJECTS_DIR, stage_hashcode), Tree.class);
-        for (String key : tree.get_mapping().keySet()) {
-            System.out.println(tree.get_mapping().get(key) + " " + key);
+        if (STAGE_AREA.length() != 0) {
+            cat_file(readContentsAsString(STAGE_AREA));
         }
     }
 
@@ -287,9 +286,9 @@ public class Repository {
     /**
      * Returns the type(tree or blob) of SHA-1 object.
      */
-    public static String typeOf(String hashcode) {
-        validateObj(hashcode);
-        File obj_f = join(OBJECTS_DIR, hashcode);
+    public static String typeOf(String objID) {
+        validateObj(objID);
+        File obj_f = join(OBJECTS_DIR, objID);
         GitletObject obj_g = readObject(obj_f, GitletObject.class);
         return obj_g.getType();
     }
@@ -335,11 +334,6 @@ public class Repository {
      */
     public static void validateFile(String filename) {
         List<String> file_list = plainFilenamesIn(CWD);
-        if (file_list != null) {
-            for (String file : file_list) {
-                System.out.println(file);
-            }
-        }
         if (file_list == null || !file_list.contains(filename)) {
             System.out.println("File does not exist.");
             System.exit(0);
@@ -380,23 +374,25 @@ public class Repository {
     }
 
     public static String addObjToDatabase(GitletObject obj) {
-        byte[] contents = serialize(obj);
-        String hashcode = sha1(contents);
-
-        File obj_f = join(OBJECTS_DIR, hashcode);
+        String objID = hashObj(obj);
+        File obj_f = join(OBJECTS_DIR, objID);
         if (!obj_f.exists()) {
             try {
                 obj_f.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else {
-            System.out.println("Object exist.");
-            System.exit(0);
+            writeObject(join(OBJECTS_DIR, objID), obj);
         }
-        writeContents(obj_f, contents);
+        return objID;
+    }
 
-        return hashcode;
+    /**
+     * Returns the hashcode of Gitlet Object(blob, tree, commit).
+     */
+    public static String hashObj(GitletObject obj) {
+        byte[] contents = serialize(obj);
+        return sha1(contents);
     }
 
     /**
@@ -423,5 +419,35 @@ public class Repository {
         String hashcode = readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
         Commit commit = readObject(join(OBJECTS_DIR, hashcode), Commit.class);
         return commit;
+    }
+
+    /**
+     * Returns tree of stage-area.
+     * @return
+     */
+    public static Tree getStagedTree() {
+        Tree cache_tree;
+        // is stage-area empty.
+        if (STAGE_AREA.length() == 0) {
+            cache_tree = new Tree();
+        } else {
+            Tree prev = readObject(join(OBJECTS_DIR, readContentsAsString(STAGE_AREA)), Tree.class);
+            cache_tree = new Tree(prev);
+        }
+        return cache_tree;
+    }
+
+    /**
+     * Determine the file is tracked or not.
+     */
+    public static boolean isTracked(String filename) {
+        Tree tracked_tree = getHeadCommit().getTree();
+        TreeMap<String, String> map = tracked_tree.get_mapping();
+        for (String key : map.keySet()) {
+            if (key.equals(filename)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

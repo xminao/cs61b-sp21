@@ -34,6 +34,10 @@ public class Main {
                 validateNumArgs(args, 2);
                 Repository.commit(args[1]);
                 break;
+            case "rm":
+                validateNumArgs(args, 2);
+                Repository.rm(args[1]);
+                break;
             case "branch":
                 validateNumArgs(args, 2);
                 Repository.branch(args[1]);
@@ -43,12 +47,16 @@ public class Main {
                 Repository.status();
                 break;
             case "cat-file":
+                validateNumArgs(args, 2);
                 Repository.cat_file(args[1]);
                 break;
             case "ls-stage":
-                Repository.ls_stage();
+                validateNumArgs(args, 1);
+                //Repository.ls_stage();
+                Index.ls_stage();
                 break;
             case "typeof":
+                validateNumArgs(args, 2);
                 System.out.println(Repository.typeOf(args[1]));
                 break;
             default:
