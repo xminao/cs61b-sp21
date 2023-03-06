@@ -86,6 +86,10 @@ public class Repository {
 
         // add file to index(stage area).
         File file = join(CWD, filename);
+        if (!file.exists()) {
+            System.out.println("File does not exist.");
+            System.exit(0);
+        }
         Index.addIndex(file);
     }
 
@@ -223,6 +227,14 @@ public class Repository {
         // checkout [branch name]
         if(args.length == 2) {
             String branch_ref = args[1];
+            // set as current branch (HEAD).
+            if (getHeadRef().equals(branch_ref)) {
+                System.out.println("No need to checkout the current branch.");
+                System.exit(0);
+            }
+            Commit checkout_commit = getCommitByRef(branch_ref);
+            Tree root = checkout_commit.getTree();
+            overwritingCWD(root);
             setHeadRef(branch_ref);
         } else if (args.length == 3 && args[1].equals("--")) { // checkout -- [file name]
             String filename = args[2];
@@ -244,11 +256,47 @@ public class Repository {
         }
     }
 
+    /**
+     * Any files that are tracked in the current branch but are not present in the checked-out branch are deleted.
+     */
+    private static void overwritingCWD(Tree checkout_tree) {
+        // current branch commit (HEAD)
+        Commit head_commit = getHeadCommit();
+        Tree head_tree = head_commit.getTree();
+
+        List<String> list = plainFilenamesIn(CWD);
+        if (list != null) {
+            // delete file tracked in current branch not present in
+            // the checked-out branch.
+            for (String filename : list) {
+                if (head_tree.has(filename) && !checkout_tree.has(filename)) {
+                    restrictedDelete(filename);
+                }
+                if (!head_tree.has(filename) && checkout_tree.has(filename)) {
+                    System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                    System.exit(0);
+                }
+            }
+        }
+
+        // overwriting CWD with checked-out tree
+        for (String filename : checkout_tree) {
+            String OID = checkout_tree.getObjID(filename);
+            Blob blob = readObject(join(OBJECTS_DIR, OID), Blob.class);
+            writeContents(join(CWD, filename), blob.toString());
+        }
+
+        // clear the staging area.
+        Index.clearIndex();
+    }
+
+    /**
+     * Overwriting file in CWD with file [filename] in tree.
+     */
     private static void overwritingCWDFile(Tree tree, String filename) {
         if (tree.has(filename)) {
             String OID = tree.getObjID(filename);
             Blob blob = readObject(join(OBJECTS_DIR, OID), Blob.class);
-            System.out.println(blob);
             writeContents(join(CWD, filename), blob.toString());
         } else {
             System.out.println("File does not exist in that commit.");
@@ -275,6 +323,24 @@ public class Repository {
         }
         String obj_ID = getHeadCommitID();
         writeContents(ref_f, obj_ID);
+    }
+
+    /**
+     * Deletes the branch with the given name. This only means to delete the pointer associated with the branch;
+     * it does not mean to delete all commits that were created under the branch, or anything like that.
+     */
+    public static void rm_branch(String branch) {
+        File ref_f = join(BRANCHES_DIR, branch);
+        if (!ref_f.exists() || !ref_f.isFile()) {
+            System.out.println("A branch with that name does not exist.");
+            System.exit(0);
+        }
+        String head_ref = getHeadRef();
+        if (head_ref.equals(branch)) {
+            System.out.println("Cannot remove the current branch.");
+            System.exit(0);
+        }
+        ref_f.delete();
     }
 
     /**
@@ -469,4 +535,18 @@ public class Repository {
         }
         return readObject(obj_f, Commit.class);
     }
+
+    /**
+     * Returns the commit by branch ref.
+     */
+    public static Commit getCommitByRef(String ref) {
+        File ref_f = join(BRANCHES_DIR, ref);
+        if (!ref_f.exists() || !ref_f.isFile()) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
+        String OID = readContentsAsString(ref_f);
+        return readObject(join(OBJECTS_DIR, OID), Commit.class);
+    }
+
 }

@@ -40,6 +40,10 @@ public class Main {
                 validateNumArgs(args, 2);
                 Repository.branch(args[1]);
                 break;
+            case "rm-branch":
+                validateNumArgs(args, 2);
+                Repository.rm_branch(args[1]);
+                break;
             case "status":
                 validateNumArgs(args, 1);
                 Repository.status();
