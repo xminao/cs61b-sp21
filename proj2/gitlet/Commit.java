@@ -64,8 +64,32 @@ public class Commit extends GitletObject {
         tree = new Tree();
     }
 
+    /**
+     * Returns the root tree.
+     */
     public Tree getTree() {
         return tree;
+    }
+
+    /**
+     * Returns the parent commit ID.
+     */
+    public String getParent() {
+        return parent;
+    }
+
+    /**
+     * Returns commit created date.
+     */
+    public String getDate() {
+        return date;
+    }
+
+    /**
+     * Returns message of commit.
+     */
+    public String getMessage() {
+        return message;
     }
 
     /**

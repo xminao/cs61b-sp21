@@ -44,6 +44,10 @@ public class Main {
                 validateNumArgs(args, 1);
                 Repository.status();
                 break;
+            case "log":
+                validateNumArgs(args, 1);
+                Repository.log();
+                break;
             case "cat-file":
                 validateNumArgs(args, 2);
                 Repository.cat_file(args[1]);

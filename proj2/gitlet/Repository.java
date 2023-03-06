@@ -165,6 +165,36 @@ public class Repository {
     }
 
     /**
+     * Starting at the current head commit, display information about each commit backwards
+     * along the commit tree until the initial commit, following the first parent commit links,
+     * ignoring any second parents found in merge commits.
+     * format follow:
+     *      ===
+     *      commit 3e8bf1d794ca2e9ef8a4007275acf3751c7170ff
+     *      Date: Thu Nov 9 17:01:33 2017 -0800
+     *      Another commit message.
+     *
+     *      ===
+     *      commit e881c9575d180a215d1a636545b8fd9abfb1d2bb
+     *      Date: Wed Dec 31 16:00:00 1969 -0800
+     *      initial commit
+     */
+    public static void log() {
+        // HEAD pointer.
+        Commit head_commit = getHeadCommit();
+        // HEAD commit ID.
+        String OID = getHeadCommitID();
+        while (OID != null) {
+            Commit parent = readObject(join(OBJECTS_DIR, OID), Commit.class);
+            System.out.println("===" + "\n");
+            System.out.println("commit " + OID);
+            System.out.println("Date: " + parent.getDate());
+            System.out.println(parent.getMessage());
+            OID = parent.getParent();
+        }
+    }
+
+    /**
      * Checkout is a kind of general command that can do a few different things depending on what its arguments are.
      *
      * 1. checkout -- [file name]
