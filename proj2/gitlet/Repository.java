@@ -215,13 +215,41 @@ public class Repository {
      *      branch but are not present in the checked-out branch are deleted. The staging area is cleared, unless the
      *      checked-out branch is the current branch
      */
-    public static void check_out(String... args) {
+    public static void checkout(String... args) {
         // checkout [branch name]
-        if(args.length == 1) {
+        if(args.length == 2) {
 
+        } else if (args.length == 3 && args[1].equals("--")) { // checkout -- [file name]
+            String filename = args[2];
+            // HEAD pointer.
+            Commit head_commit = getHeadCommit();
+            Tree root = head_commit.getTree();
+            overwritingCWDFile(root, filename);
+        } else if (args.length == 4 && args[2].equals("--")) { // checkout [commit id] -- [file name]
+            String commit_ID = args[1];
+            String filename = args[3];
+            // Commit Pointer
+            Commit commit = getCommitByID(commit_ID);
+            Tree root = commit.getTree();
+            overwritingCWDFile(root, filename);
+        } else {
+            // error message (class later...)
+            System.out.println("Incorrect operands.");
+            System.exit(0);
         }
     }
 
+    private static void overwritingCWDFile(Tree tree, String filename) {
+        if (tree.has(filename)) {
+            String OID = tree.getObjID(filename);
+            Blob blob = readObject(join(OBJECTS_DIR, OID), Blob.class);
+            System.out.println(blob);
+            writeContents(join(CWD, filename), blob.toString());
+        } else {
+            System.out.println("File does not exist in that commit.");
+            System.exit(0);
+        }
+    }
 
 
     /**
@@ -433,5 +461,17 @@ public class Repository {
      */
     public static String getHeadCommitID() {
         return readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
+    }
+
+    /**
+     * Returns the commit by ID.
+     */
+    public static Commit getCommitByID(String ID) {
+        File obj_f = join(OBJECTS_DIR, ID);
+        if (!obj_f.exists()) {
+            System.out.println("No commit with that id exists.");
+            System.exit(0);
+        }
+        return readObject(obj_f, Commit.class);
     }
 }

@@ -48,6 +48,9 @@ public class Main {
                 validateNumArgs(args, 1);
                 Repository.log();
                 break;
+            case "checkout":
+                Repository.checkout(args);
+                break;
             case "cat-file":
                 validateNumArgs(args, 2);
                 Repository.cat_file(args[1]);
@@ -66,7 +69,6 @@ public class Main {
             default:
                 System.out.println("No command with that name exists.");
                 System.exit(0);
-            // TODO: FILL THE REST IN
         }
     }
 
