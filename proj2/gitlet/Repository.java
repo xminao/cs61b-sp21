@@ -3,8 +3,6 @@ package gitlet;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Objects;
-import java.util.TreeMap;
 import java.util.List;
 
 import static gitlet.Utils.*;
@@ -15,12 +13,10 @@ import static gitlet.Utils.*;
  *  TODO: It's a good idea to give a description here of what else this Class
  *  does at a high level.
  *
- *  @author TODO
+ *  @author xminao
  */
 public class Repository {
     /**
-     * TODO: add instance variables here.
-     *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
      * variable is used. We've provided two examples for you.
@@ -69,11 +65,11 @@ public class Repository {
 
         // Initialize root commit (empty commit)
         Commit init_commit = new Commit();
-        String hashcode = addObjToDatabase(init_commit);
-        System.out.println("init commit hashcode: " + hashcode);
+        String obj_ID = addObjToDatabase(init_commit);
+        System.out.println("init commit hashcode: " + obj_ID);
 
         // Initialize default branch : master
-        initBranch("master", init_commit);
+        initBranch("master", obj_ID);
         System.out.println("current branch: " + getHeadRef());
 
         // Initialize stage-area
@@ -111,6 +107,8 @@ public class Repository {
      * is said to be tracking the saved files.
      */
     public static void commit(String message) {
+        validateRepo();
+
         // Get the current HEAD commit.
         Commit HEAD = getHeadCommit();
 
@@ -138,6 +136,8 @@ public class Repository {
      * the exact format it should follow is as follows.
      */
     public static void status() {
+        validateRepo();
+
         System.out.println("=== Branches ===");
         for (String branch : branchList()) {
             if (branch.equals(getHeadRef())) {
@@ -180,6 +180,8 @@ public class Repository {
      *      initial commit
      */
     public static void log() {
+        validateRepo();
+
         // HEAD pointer.
         Commit head_commit = getHeadCommit();
         // HEAD commit ID.
@@ -216,9 +218,12 @@ public class Repository {
      *      checked-out branch is the current branch
      */
     public static void checkout(String... args) {
+        validateRepo();
+
         // checkout [branch name]
         if(args.length == 2) {
-
+            String branch_ref = args[1];
+            setHeadRef(branch_ref);
         } else if (args.length == 3 && args[1].equals("--")) { // checkout -- [file name]
             String filename = args[2];
             // HEAD pointer.
@@ -256,25 +261,36 @@ public class Repository {
      * Creates a new branch with the given name, and points it at the current head commit.
      */
     public static void branch(String branch) {
-        File f = join(BRANCHES_DIR, branch);
-        if (f.exists() && f.isFile()) {
+        validateRepo();
+
+        File ref_f = join(BRANCHES_DIR, branch);
+        if (ref_f.exists() && ref_f.isFile()) {
             System.out.println("A branch with that name already exists.");
             System.exit(0);
         }
         try {
-            f.createNewFile();
+            ref_f.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        String obj_ID = getHeadCommitID();
+        writeContents(ref_f, obj_ID);
     }
 
     /**
      * Initial branch (master).
      */
-    public static void initBranch(String branch, Commit commit) {
-        branch(branch);
-        File f = join(BRANCHES_DIR, branch);
-        writeContents(f, sha1(serialize(commit)));
+    public static void initBranch(String branch, String objID) {
+        File ref_f = join(BRANCHES_DIR, branch);
+        if (!ref_f.exists()) {
+            try {
+                ref_f.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        writeContents(ref_f, objID);
         setHeadRef(branch);
     }
 
@@ -371,36 +387,6 @@ public class Repository {
     /**
      * Add Object file to database.
      */
-    public static void addObjToDatabase(String hashcode, byte[] contents) {
-        // Create Object directory.
-//        String part_head = hashcode.substring(0, 2);
-//        String part_last = hashcode.substring(2);
-//
-//        File obj_dir = new File(OBJECTS_DIR, part_head);
-//        if (!obj_dir.exists()) {
-//            obj_dir.mkdir();
-//        }
-//        File obj = new File(OBJECTS_DIR, part_last);
-//        try {
-//            obj.createNewFile();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-        // Create Object file.
-        File obj_f = join(OBJECTS_DIR, hashcode);
-        if (!obj_f.exists()) {
-            try {
-                obj_f.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // Write contents to correspond Object file.
-        // Overwrite if file exist.
-        writeContents(obj_f, contents);
-    }
-
     public static String addObjToDatabase(GitletObject obj) {
         String objID = hashObj(obj);
         File obj_f = join(OBJECTS_DIR, objID);
@@ -427,6 +413,15 @@ public class Repository {
      * Set the ref of HEAD pointer branch.
      */
     public static void setHeadRef(String ref) {
+        List<String> branches = plainFilenamesIn(BRANCHES_DIR);
+        if (branches == null || !branches.contains(ref)) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
+        if (getHeadRef().equals(ref)) {
+            System.out.println("No need to checkout the current branch.");
+            System.exit(0);
+        }
         String head = "ref: refs/heads/" + ref;
         writeContents(HEAD_FILE, head);
     }
@@ -444,8 +439,8 @@ public class Repository {
      * Returns the commit of current HEAD pointer.
      */
     public static Commit getHeadCommit() {
-        String hashcode = readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
-        Commit commit = readObject(join(OBJECTS_DIR, hashcode), Commit.class);
+        String obj_ID = readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
+        Commit commit = readObject(join(OBJECTS_DIR, obj_ID), Commit.class);
         return commit;
     }
 
