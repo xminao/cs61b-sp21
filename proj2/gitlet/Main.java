@@ -55,6 +55,10 @@ public class Main {
             case "checkout":
                 Repository.checkout(args);
                 break;
+            case "reset":
+                validateNumArgs(args, 2);
+                Repository.reset(args[1]);
+                break;
             case "cat-file":
                 validateNumArgs(args, 2);
                 Repository.cat_file(args[1]);

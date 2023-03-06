@@ -224,6 +224,7 @@ public class Repository {
     public static void checkout(String... args) {
         validateRepo();
 
+        // TODO: abbreviated
         // checkout [branch name]
         if(args.length == 2) {
             String branch_ref = args[1];
@@ -346,7 +347,7 @@ public class Repository {
     /**
      * Initial branch (master).
      */
-    public static void initBranch(String branch, String objID) {
+    private static void initBranch(String branch, String objID) {
         File ref_f = join(BRANCHES_DIR, branch);
         if (!ref_f.exists()) {
             try {
@@ -374,6 +375,22 @@ public class Repository {
             }
         }
         return list;
+    }
+
+    /**
+     * Checks out all the files tracked by the given commit. Removes tracked files that are not present in that commit.
+     * Also moves the current branch’s head to that commit node.
+     */
+    public static void reset(String commitID) {
+        Commit commit = getCommitByID(commitID);
+        Tree root = commit.getTree();
+        overwritingCWD(root);
+
+        String ref = getHeadRef();
+        File ref_f = join(BRANCHES_DIR, ref);
+        writeContents(ref_f, commitID);
+
+        System.out.println(getHeadCommitID());
     }
 
     /**
