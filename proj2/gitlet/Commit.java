@@ -3,6 +3,7 @@ package gitlet;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TreeMap;
 
 import static gitlet.Repository.OBJECTS_DIR;
@@ -26,8 +27,8 @@ public class Commit extends GitletObject {
     /**
      * Format Date.
      */
-    private static String pattern = "EEEEE MMMMM d HH:mm:ss yyyy Z";
-    private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+    private static String pattern = "EEE MMM d HH:mm:ss yyyy Z";
+    private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern, Locale.ENGLISH);
 
     /** The author of this Commit. */
     //private String author;

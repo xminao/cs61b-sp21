@@ -59,6 +59,9 @@ public class Main {
                 validateNumArgs(args, 2);
                 Repository.reset(args[1]);
                 break;
+            case "merge":
+                validateNumArgs(args, 2);
+
             case "cat-file":
                 validateNumArgs(args, 2);
                 Repository.cat_file(args[1]);

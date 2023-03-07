@@ -66,11 +66,11 @@ public class Repository {
         // Initialize root commit (empty commit)
         Commit init_commit = new Commit();
         String obj_ID = addObjToDatabase(init_commit);
-        System.out.println("init commit hashcode: " + obj_ID);
+        //System.out.println("init commit hashcode: " + obj_ID);
 
         // Initialize default branch : master
         initBranch("master", obj_ID);
-        System.out.println("current branch: " + getHeadRef());
+        //System.out.println("current branch: " + getHeadRef());
 
         // Initialize stage-area
         Index.initIndex();
@@ -128,7 +128,7 @@ public class Repository {
         Commit newCommit = new Commit(getHeadCommitID(), message, root);
         String objID = addObjToDatabase(newCommit);
         setHeadCommitID(objID);
-        System.out.println("new commit objID: " + objID);
+        //System.out.println("new commit objID: " + objID);
 
         // clean the stage-area.
         Index.clearIndex();
@@ -192,10 +192,10 @@ public class Repository {
         String OID = getHeadCommitID();
         while (OID != null) {
             Commit parent = readObject(join(OBJECTS_DIR, OID), Commit.class);
-            System.out.println("===" + "\n");
+            System.out.println("===");
             System.out.println("commit " + OID);
             System.out.println("Date: " + parent.getDate());
-            System.out.println(parent.getMessage());
+            System.out.println(parent.getMessage() + "\n");
             OID = parent.getParent();
         }
     }
@@ -390,7 +390,14 @@ public class Repository {
         File ref_f = join(BRANCHES_DIR, ref);
         writeContents(ref_f, commitID);
 
-        System.out.println(getHeadCommitID());
+        //System.out.println(getHeadCommitID());
+    }
+
+    /**
+     * Merges files from the given branch into the current branch.
+     */
+    public static void merge(String branch) {
+            
     }
 
     /**
