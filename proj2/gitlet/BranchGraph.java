@@ -5,17 +5,12 @@ import java.util.*;
 public class BranchGraph {
 
     private HashMap<String, Set<String>> adjMap;
-    private Set<String> vSet;
 
     public BranchGraph() {
         this.adjMap = new HashMap<>();
-        this.vSet = new HashSet<>();
     }
 
     public void addEdge(String v, String w) {
-        vSet.add(v);
-        vSet.add(w);
-
         if (adjMap.containsKey(v)) {
             adjMap.get(v).add(w);
         } else {
@@ -27,10 +22,6 @@ public class BranchGraph {
 
     public Set<String> adj(String v) {
         return adjMap.get(v);
-    }
-
-    public int V() {
-        return vSet.size();
     }
 
     @Override

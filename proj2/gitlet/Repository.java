@@ -3,6 +3,7 @@ package gitlet;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static gitlet.Utils.*;
@@ -678,9 +679,35 @@ public class Repository {
         }
     }
 
-    public static void testGraph() {
+    public static void printSplitPoint(String OID_1, String OID_2) {
+        System.out.println(splitPoint(OID_1, OID_2));
+    }
+
+    /**
+     * Returns the Split Point of two branch.
+     */
+    private static String splitPoint(String OID_1, String OID_2) {
         BranchGraph G = generateBranchGraph();
-        System.out.println(G);
+        HashMap<String, Boolean> common = new HashMap<>();
+        BFS bfs = new BFS(G, common);
+        bfs.bfs(OID_1);
+        bfs = new BFS(G, common);
+        bfs.bfs(OID_2);
+
+        String closer = null;
+        for (String s : common.keySet()) {
+            // is common ancestor
+            if (common.get(s)) {
+                if (closer == null) {
+                    closer = s;
+                } else {
+                    if (bfs.dist(s) < bfs.dist(closer)) {
+                        closer = s;
+                    }
+                }
+            }
+        }
+        return closer;
     }
 
 }
