@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import static gitlet.Utils.*;
 
@@ -195,24 +196,11 @@ public class Repository {
     public static void log() {
         validateRepo();
 
-        // HEAD pointer.
-        Commit head_commit = getHeadCommit();
         // HEAD commit ID.
         String OID = getHeadCommitID();
         while (OID != null) {
             Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
-            System.out.println("===");
-            System.out.println("commit " + OID);
-            if (commit.getParent() != null) {
-                StringBuilder builder = new StringBuilder();
-                builder.append("Merge: ");
-                for (String str : commit.getParent()) {
-                    builder.append(shortenOID(str)).append(" ");
-                }
-                System.out.println(builder);
-            }
-            System.out.println("Date: " + commit.getDate());
-            System.out.println(commit.getMessage() + "\n");
+            logPrinter(OID);
             if (commit.getParent() != null) {
                 OID = commit.getParent()[0];
             } else {
@@ -225,7 +213,29 @@ public class Repository {
      * Like log, except displays information about all commits ever made. The order of the commits does not matter.
      */
     public static void global_log() {
+        validateRepo();
 
+         BranchGraph graph = generateBranchGraph();
+         Set<String> set = graph.allCommit();
+         for (String OID : set) {
+            logPrinter(OID);
+         }
+    }
+
+    private static void logPrinter(String OID) {
+        Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
+        System.out.println("===");
+        System.out.println("commit " + OID);
+        if (commit.getParent() != null) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("Merge: ");
+            for (String str : commit.getParent()) {
+                builder.append(shortenOID(str)).append(" ");
+            }
+            System.out.println(builder);
+        }
+        System.out.println("Date: " + commit.getDate());
+        System.out.println(commit.getMessage() + "\n");
     }
 
     /**
@@ -234,7 +244,16 @@ public class Repository {
      * put the operand in quotation marks, as for the commit command below.
      */
     public static void find(String message) {
+        validateRepo();
 
+        BranchGraph graph = generateBranchGraph();
+        Set<String> set = graph.allCommit();
+        for (String OID : set) {
+            Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
+            if (commit.getMessage().contains(message)) {
+                System.out.println(OID);
+            }
+        }
     }
 
     /**
@@ -368,11 +387,9 @@ public class Repository {
      * it does not mean to delete all commits that were created under the branch, or anything like that.
      */
     public static void rm_branch(String branch) {
+        validateBranch(branch);
+
         File ref_f = join(BRANCHES_DIR, branch);
-        if (!ref_f.exists() || !ref_f.isFile()) {
-            System.out.println("A branch with that name does not exist.");
-            System.exit(0);
-        }
         String head_ref = getHeadRef();
         if (head_ref.equals(branch)) {
             System.out.println("Cannot remove the current branch.");
@@ -437,11 +454,68 @@ public class Repository {
 
     }
 
-//    private static Commit getSplitPoint(String... branches) {
-//        for (String ref : branches) {
-//
-//        }
-//    }
+    /**
+     * Returns the graph of branches.
+     */
+    private static BranchGraph generateBranchGraph() {
+        BranchGraph graph = new BranchGraph();
+
+        List<String> files = plainFilenamesIn(BRANCHES_DIR);
+        for (String file : files) {
+            File f = join(BRANCHES_DIR, file);
+            String current_ID = readContentsAsString(f);
+
+            // recursion
+            graphHelper(current_ID, graph);
+        }
+
+        return graph;
+    }
+
+    private static void graphHelper(String current_ID, BranchGraph graph) {
+        if (current_ID == null) {
+            return;
+        }
+        Commit commit = readObject(join(OBJECTS_DIR, current_ID), Commit.class);
+        String[] parent = commit.getParent();
+        if (parent != null) {
+            for (String parent_ID : parent) {
+                graph.addEdge(current_ID, parent_ID);
+                graphHelper(parent_ID, graph);
+            }
+        }
+    }
+
+    public static void printSplitPoint(String OID_1, String OID_2) {
+        System.out.println(splitPoint(OID_1, OID_2));
+    }
+
+    /**
+     * Returns the Split Point of two branch.
+     */
+    private static String splitPoint(String OID_1, String OID_2) {
+        BranchGraph G = generateBranchGraph();
+        HashMap<String, Boolean> common = new HashMap<>();
+        BFS bfs = new BFS(G, common);
+        bfs.bfs(OID_1);
+        bfs = new BFS(G, common);
+        bfs.bfs(OID_2);
+
+        String closer = null;
+        for (String s : common.keySet()) {
+            // is common ancestor
+            if (common.get(s)) {
+                if (closer == null) {
+                    closer = s;
+                } else {
+                    if (bfs.dist(s) < bfs.dist(closer)) {
+                        closer = s;
+                    }
+                }
+            }
+        }
+        return closer;
+    }
 
     /**
      * Cat contents of an SHA-1 object file in objects-database.
@@ -449,13 +523,6 @@ public class Repository {
     public static void cat_file(String hashcode) {
         validateObj(hashcode);
 
-//        String type = typeOf(hashcode);
-//        if (type.equals("tree")) {
-//            listOfTree(hashcode);
-//        } else {
-//            byte[] read = Utils.readContents(join(OBJECTS_DIR, hashcode));
-//            System.out.println(new String(read));
-//        }
         GitletObject obj = readObject(join(OBJECTS_DIR, hashcode), GitletObject.class);
         System.out.println(obj);
     }
@@ -513,6 +580,17 @@ public class Repository {
         List<String> file_list = plainFilenamesIn(CWD);
         if (file_list == null || !file_list.contains(filename)) {
             System.out.println("File does not exist.");
+            System.exit(0);
+        }
+    }
+
+    /**
+     * Validate branch
+     */
+    public static void validateBranch(String branch) {
+        File ref_f = join(BRANCHES_DIR, branch);
+        if (!ref_f.exists() || !ref_f.isFile()) {
+            System.out.println("A branch with that name does not exist.");
             System.exit(0);
         }
     }
@@ -641,73 +719,6 @@ public class Repository {
             }
         }
         return null;
-    }
-
-//    public static String splitPoint(String branch_1, String branch_2) {
-//        List<>
-//    }
-
-    /**
-     * Returns the graph of branches.
-     */
-    private static BranchGraph generateBranchGraph() {
-        BranchGraph graph = new BranchGraph();
-
-        List<String> files = plainFilenamesIn(BRANCHES_DIR);
-        for (String file : files) {
-            File f = join(BRANCHES_DIR, file);
-            String current_ID = readContentsAsString(f);
-
-            // recursion
-            graphHelper(current_ID, graph);
-        }
-
-        return graph;
-    }
-
-    private static void graphHelper(String current_ID, BranchGraph graph) {
-        if (current_ID == null) {
-            return;
-        }
-        Commit commit = readObject(join(OBJECTS_DIR, current_ID), Commit.class);
-        String[] parent = commit.getParent();
-        if (parent != null) {
-            for (String parent_ID : parent) {
-                graph.addEdge(current_ID, parent_ID);
-                graphHelper(parent_ID, graph);
-            }
-        }
-    }
-
-    public static void printSplitPoint(String OID_1, String OID_2) {
-        System.out.println(splitPoint(OID_1, OID_2));
-    }
-
-    /**
-     * Returns the Split Point of two branch.
-     */
-    private static String splitPoint(String OID_1, String OID_2) {
-        BranchGraph G = generateBranchGraph();
-        HashMap<String, Boolean> common = new HashMap<>();
-        BFS bfs = new BFS(G, common);
-        bfs.bfs(OID_1);
-        bfs = new BFS(G, common);
-        bfs.bfs(OID_2);
-
-        String closer = null;
-        for (String s : common.keySet()) {
-            // is common ancestor
-            if (common.get(s)) {
-                if (closer == null) {
-                    closer = s;
-                } else {
-                    if (bfs.dist(s) < bfs.dist(closer)) {
-                        closer = s;
-                    }
-                }
-            }
-        }
-        return closer;
     }
 
 }

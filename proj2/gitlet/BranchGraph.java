@@ -1,5 +1,6 @@
 package gitlet;
 
+import java.lang.invoke.StringConcatFactory;
 import java.util.*;
 
 public class BranchGraph {
@@ -22,6 +23,17 @@ public class BranchGraph {
 
     public Set<String> adj(String v) {
         return adjMap.get(v);
+    }
+
+    public Set<String> allCommit() {
+        Set<String> all = new HashSet<>();
+        for (String s : adjMap.keySet()) {
+            all.add(s);
+            for (String t : adjMap.get(s)) {
+                all.add(t);
+            }
+        }
+        return all;
     }
 
     @Override
