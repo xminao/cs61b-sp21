@@ -2,10 +2,7 @@ package gitlet;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static gitlet.Utils.*;
 
@@ -247,12 +244,22 @@ public class Repository {
         validateRepo();
 
         BranchGraph graph = generateBranchGraph();
-        Set<String> set = graph.allCommit();
-        for (String OID : set) {
+        Set<String> all = graph.allCommit();
+        Set<String> set = new HashSet<>();
+        for (String OID : all) {
             Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
             if (commit.getMessage().contains(message)) {
-                System.out.println(OID);
+                set.add(OID);
             }
+        }
+
+        if (set.size() == 0) {
+            System.out.println("Found no commit with that message.");
+            System.exit(0);
+        }
+
+        for (String OID : set) {
+            System.out.println(OID);
         }
     }
 
