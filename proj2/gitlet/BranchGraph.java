@@ -4,7 +4,7 @@ import java.util.*;
 
 public class BranchGraph {
 
-    private HashMap<String, List<String>> adjMap;
+    private HashMap<String, Set<String>> adjMap;
     private Set<String> vSet;
 
     public BranchGraph() {
@@ -19,13 +19,13 @@ public class BranchGraph {
         if (adjMap.containsKey(v)) {
             adjMap.get(v).add(w);
         } else {
-            List<String> adjList = new ArrayList<>();
+            Set<String> adjList = new HashSet<>();
             adjList.add(w);
             adjMap.put(v, adjList);
         }
     }
 
-    public List<String> adj(String v) {
+    public Set<String> adj(String v) {
         return adjMap.get(v);
     }
 
