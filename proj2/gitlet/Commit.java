@@ -17,8 +17,6 @@ import static gitlet.Utils.*;
  */
 public class Commit extends GitletObject {
     /**
-     * TODO: add instance variables here.
-     *
      * List all instance variables of the Commit class here with a useful
      * comment above them describing what that variable represents and how that
      * variable is used. We've provided one example for `message`.
@@ -35,7 +33,7 @@ public class Commit extends GitletObject {
     /** The created date of this Commit. */
     private String date;
     /** The parent Commit of this Commit. */
-    private String parent;
+    private String[] parent;
     /** The message of this Commit. */
     private String message;
     /**
@@ -44,15 +42,12 @@ public class Commit extends GitletObject {
      */
     private Tree tree;
 
-    /* TODO: fill in the rest of this class. */
-    @SuppressWarnings("unchecked")
-    public Commit(String parent, String message, Tree tree) {
+    public Commit(String[] parent, String message, Tree tree) {
         super(Type.COMMIT);
         //this.author = author;
         this.date = simpleDateFormat.format(new Date());
         this.parent = parent;
         this.message = message;
-        //tree = readObject(join(OBJECTS_DIR, parent), Commit.class).getTree();
         this.tree = tree;
     }
 
@@ -75,7 +70,7 @@ public class Commit extends GitletObject {
     /**
      * Returns the parent commit ID.
      */
-    public String getParent() {
+    public String[] getParent() {
         return parent;
     }
 

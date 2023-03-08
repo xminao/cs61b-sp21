@@ -74,8 +74,8 @@ public class Main {
                 validateNumArgs(args, 2);
                 System.out.println(Repository.typeOf(args[1]));
                 break;
-            case "generate":
-                System.out.println(Index.generateCommitTree());
+            case "generateG":
+                Repository.testGraph();
                 break;
             default:
                 System.out.println("No command with that name exists.");

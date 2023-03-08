@@ -69,6 +69,10 @@ public class IndexTree implements Serializable, Iterable<String> {
         return getObjID(filename).equals(objID);
     }
 
+    public boolean isEmpty() {
+        return _mapping.isEmpty();
+    }
+
     /**
      * Returns file name list by state (new file, deleted, modified).
      */

@@ -84,6 +84,10 @@ public class Index {
      * stage it for removal and remove the file from the working directory if the user has not already done so
      */
     public static void delIndex(String filename) {
+        if (!isTracked(filename)) {
+            System.out.println("No reason to remove the file.");
+            System.exit(0);
+        }
         // HEAD commit root tree.
         Tree HEAD_tree = Repository.getHeadCommit().getTree();
         // index tree (stage-area tree).
@@ -163,6 +167,9 @@ public class Index {
         writeObject(INDEX_AREA, tree);
     }
 
+    public static boolean isIndexEmpty() {
+        return getIndexTree().isEmpty();
+    }
     /**
      * Determine the file is tracked or not.
      * be tacked: staged or in HEAD commit.

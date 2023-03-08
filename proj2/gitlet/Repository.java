@@ -112,6 +112,14 @@ public class Repository {
      */
     public static void commit(String message) {
         validateRepo();
+        if (Index.isIndexEmpty()) {
+            System.out.println("No changes added to the commit.");
+            System.exit(0);
+        }
+        if (message.trim().isEmpty()) {
+            System.out.println("Please enter a commit message.");
+            System.exit(0);
+        }
 
         // Get the current HEAD commit.
         Commit HEAD = getHeadCommit();
@@ -125,7 +133,7 @@ public class Repository {
         }
 
         // new commit
-        Commit newCommit = new Commit(getHeadCommitID(), message, root);
+        Commit newCommit = new Commit(new String[]{getHeadCommitID()}, message.trim(), root);
         String objID = addObjToDatabase(newCommit);
         setHeadCommitID(objID);
         //System.out.println("new commit objID: " + objID);
@@ -191,13 +199,41 @@ public class Repository {
         // HEAD commit ID.
         String OID = getHeadCommitID();
         while (OID != null) {
-            Commit parent = readObject(join(OBJECTS_DIR, OID), Commit.class);
+            Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
             System.out.println("===");
             System.out.println("commit " + OID);
-            System.out.println("Date: " + parent.getDate());
-            System.out.println(parent.getMessage() + "\n");
-            OID = parent.getParent();
+            if (commit.getParent() != null) {
+                StringBuilder builder = new StringBuilder();
+                builder.append("Merge: ");
+                for (String str : commit.getParent()) {
+                    builder.append(shortenOID(str)).append(" ");
+                }
+                System.out.println(builder);
+            }
+            System.out.println("Date: " + commit.getDate());
+            System.out.println(commit.getMessage() + "\n");
+            if (commit.getParent() != null) {
+                OID = commit.getParent()[0];
+            } else {
+                OID = null;
+            }
         }
+    }
+
+    /**
+     * Like log, except displays information about all commits ever made. The order of the commits does not matter.
+     */
+    public static void global_log() {
+
+    }
+
+    /**
+     * Prints out the ids of all commits that have the given commit message, one per line. If there are multiple such commits,
+     * it prints the ids out on separate lines. The commit message is a single operand; to indicate a multiword message,
+     * put the operand in quotation marks, as for the commit command below.
+     */
+    public static void find(String message) {
+
     }
 
     /**
@@ -397,8 +433,14 @@ public class Repository {
      * Merges files from the given branch into the current branch.
      */
     public static void merge(String branch) {
-            
+
     }
+
+//    private static Commit getSplitPoint(String... branches) {
+//        for (String ref : branches) {
+//
+//        }
+//    }
 
     /**
      * Cat contents of an SHA-1 object file in objects-database.
@@ -552,7 +594,12 @@ public class Repository {
      * Returns the commit by ID.
      */
     public static Commit getCommitByID(String ID) {
-        File obj_f = join(OBJECTS_DIR, ID);
+        File obj_f;
+        if (ID.length() == 6 && completeOID(ID) != null) {
+            obj_f = join(OBJECTS_DIR, completeOID(ID));
+        } else {
+            obj_f = join(OBJECTS_DIR, ID);
+        }
         if (!obj_f.exists()) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
@@ -571,6 +618,69 @@ public class Repository {
         }
         String OID = readContentsAsString(ref_f);
         return readObject(join(OBJECTS_DIR, OID), Commit.class);
+    }
+
+    /**
+     * Returns shorten Object ID.
+     */
+    public static String shortenOID(String OID) {
+        return OID.substring(0, 6);
+    }
+
+    /**
+     * Returns the complete Object ID by short Object ID.
+     */
+    public static String completeOID(String shortOID) {
+        List<String> list = plainFilenamesIn(OBJECTS_DIR);
+        if (list != null) {
+            for (String filename : list) {
+                if (filename.substring(0, 6).equals(shortOID)) {
+                    return filename;
+                }
+            }
+        }
+        return null;
+    }
+
+//    public static String splitPoint(String branch_1, String branch_2) {
+//        List<>
+//    }
+
+    /**
+     * Returns the graph of branches.
+     */
+    private static BranchGraph generateBranchGraph() {
+        BranchGraph graph = new BranchGraph();
+
+        List<String> files = plainFilenamesIn(BRANCHES_DIR);
+        for (String file : files) {
+            File f = join(BRANCHES_DIR, file);
+            String current_ID = readContentsAsString(f);
+
+            // recursion
+            graphHelper(current_ID, graph);
+        }
+
+        return graph;
+    }
+
+    private static void graphHelper(String current_ID, BranchGraph graph) {
+        if (current_ID == null) {
+            return;
+        }
+        Commit commit = readObject(join(OBJECTS_DIR, current_ID), Commit.class);
+        String[] parent = commit.getParent();
+        if (parent != null) {
+            for (String parent_ID : parent) {
+                graph.addEdge(current_ID, parent_ID);
+                graphHelper(parent_ID, graph);
+            }
+        }
+    }
+
+    public static void testGraph() {
+        BranchGraph G = generateBranchGraph();
+        System.out.println(G);
     }
 
 }
