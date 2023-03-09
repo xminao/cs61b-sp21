@@ -458,7 +458,41 @@ public class Repository {
      * Merges files from the given branch into the current branch.
      */
     public static void merge(String branch) {
+        String current_OID = getHeadCommitID();
+        String merge_OID = getCommitIDByRef(branch);
+        String split_OID = splitPoint(current_OID, merge_OID);
 
+        // the split point is the same commit as the given branch.
+        // do nothing.
+        if (split_OID.equals(merge_OID)) {
+            System.out.println("Given branch is an ancestor of the current branch.");
+            System.exit(0);
+        } else if (split_OID.equals(current_OID)) {
+            // the split point is the current branch.
+            checkout(merge_OID);
+            System.out.println("Current branch fast-forwarded.");
+            System.exit(0);
+        } else { // the split point not the current / given.
+            Tree current_tree = getCommitByID(current_OID).getTree();
+            Tree merge_tree = getCommitByID(merge_OID).getTree();
+            Tree split_tree = getCommitByID(split_OID).getTree();
+
+            for (String file : split_tree) {
+                String OID = split_tree.getObjID(file);
+                // modified in the given branch since the split point.
+                if (!merge_tree.has(file, OID) && current_tree.has(file, OID)) {
+                    // changed their versions in the given branch.
+                    if (!merge_tree.has(file)) { // file removal
+                        Index.delIndex(file); // delete file
+                    } else {
+                        checkout(merge_OID, "--", file);
+                        //Index.addIndex();
+                    }
+                    // files automatically staged.
+                    Index.addIndex(join(CWD, file));
+                }
+            }
+        }
     }
 
     /**
@@ -658,8 +692,7 @@ public class Repository {
      */
     public static Commit getHeadCommit() {
         String obj_ID = readContentsAsString(join(BRANCHES_DIR, getHeadRef()));
-        Commit commit = readObject(join(OBJECTS_DIR, obj_ID), Commit.class);
-        return commit;
+        return readObject(join(OBJECTS_DIR, obj_ID), Commit.class);
     }
 
     /**
@@ -704,6 +737,18 @@ public class Repository {
         }
         String OID = readContentsAsString(ref_f);
         return readObject(join(OBJECTS_DIR, OID), Commit.class);
+    }
+
+    /**
+     * Returns the commit ID by branch ref.
+     */
+    public static String getCommitIDByRef(String ref) {
+        File ref_f = join(BRANCHES_DIR, ref);
+        if (!ref_f.exists() || !ref_f.isFile()) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
+        return readContentsAsString(ref_f);
     }
 
     /**

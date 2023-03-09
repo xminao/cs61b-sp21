@@ -263,7 +263,7 @@ public class Index {
         // modified
         // diff with HEAD commit.
         for (String filename : HEAD_tree) {
-            if (working_tree.has(filename)) {
+            if (!index_tree.has(filename) && working_tree.has(filename)) {
                 // tracked in current commit, changed in working dir, but not staged
                 if (!working_tree.getObjID(filename).equals(HEAD_tree.getObjID(filename))) {
                     not_staged_tree.add(filename, State.MODIFIED, working_tree.getObjID(filename));
@@ -272,7 +272,7 @@ public class Index {
         }
         // diff with Index(staged area).
         for (String filename : index_tree) {
-            if (working_tree.has(filename)) {
+            if (!index_tree.has(filename) && working_tree.has(filename)) {
                 // staged but with different contents than in the working dir.
                 if (!working_tree.getObjID(filename).equals(index_tree.getObjID(filename))) {
                     not_staged_tree.add(filename, State.MODIFIED, working_tree.getObjID(filename));
