@@ -105,6 +105,10 @@ public class Index {
         saveIndexTree(index_tree);
     }
 
+    public static void stagedBy() {
+
+    }
+
     /**
      * Clean the Index (stage-area)
      * generally after commit.

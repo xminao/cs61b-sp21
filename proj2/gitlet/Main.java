@@ -69,7 +69,8 @@ public class Main {
                 break;
             case "merge":
                 validateNumArgs(args, 2);
-
+                Repository.merge(args[1]);
+                break;
             case "cat-file":
                 validateNumArgs(args, 2);
                 Repository.cat_file(args[1]);

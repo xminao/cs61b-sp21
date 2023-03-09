@@ -223,7 +223,7 @@ public class Repository {
         Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
         System.out.println("===");
         System.out.println("commit " + OID);
-        if (commit.getParent() != null) {
+        if (commit.getParent() != null && commit.getParent().length != 1) {
             StringBuilder builder = new StringBuilder();
             builder.append("Merge: ");
             for (String str : commit.getParent()) {
@@ -468,8 +468,9 @@ public class Repository {
             System.out.println("Given branch is an ancestor of the current branch.");
             System.exit(0);
         } else if (split_OID.equals(current_OID)) {
-            // the split point is the current branch.
-            checkout(merge_OID);
+            // the split point is the current branch,
+            // checked out the given branch.
+            checkout("", branch);
             System.out.println("Current branch fast-forwarded.");
             System.exit(0);
         } else { // the split point not the current / given.
@@ -477,22 +478,101 @@ public class Repository {
             Tree merge_tree = getCommitByID(merge_OID).getTree();
             Tree split_tree = getCommitByID(split_OID).getTree();
 
-            for (String file : split_tree) {
-                String OID = split_tree.getObjID(file);
-                // modified in the given branch since the split point.
-                if (!merge_tree.has(file, OID) && current_tree.has(file, OID)) {
-                    // changed their versions in the given branch.
-                    if (!merge_tree.has(file)) { // file removal
-                        Index.delIndex(file); // delete file
-                    } else {
-                        checkout(merge_OID, "--", file);
-                        //Index.addIndex();
-                    }
-                    // files automatically staged.
+            // have been modified in the current branch but not in the given branch since the split point.
+            // TODO: stay as they are.
+
+            // have been modified in both the current and given branch in the same way (have the same contents
+            // or were both removed).
+            // TODO: left unchanged by the merge.
+            // if a file was removed from both the current and given branch, but a file of the same name in
+            // the working DIR,
+            // TODO: left alone and continues to be absent (not tracked nor staged) in the merge.
+
+            // not present at the split point only in the current branch,
+            // TODO: remain they are
+
+            // not present at the split point only in the given branch,
+            // TODO: checked out and staged.
+            for (String file : merge_tree) {
+                if (!split_tree.has(file) && !current_tree.has(file)) {
+                    checkout("", merge_OID, "--", file);
                     Index.addIndex(join(CWD, file));
                 }
             }
+
+            // at the split point, unmodified in the given branch, and absent in the current branch.
+            // remain absent.
+            // TODO: nothing
+
+            // modified in different ways in the current and given branch, are in conflict.
+            // "Modified in different ways": the contents of both are changed and different from other or
+            // the contents of one are changed and the other file is deleted or
+            // the file was absent at the split point and has different contents in the given and current branches.
+            // TODO: replace the contents of the conflicted file and staged the result
+            for (String file : split_tree) {
+                String split_BID = split_tree.getObjID(file);
+                // at the split point, unmodified in the current branch, and absent in the given branch,
+                // TODO: removed.
+                if (current_tree.has(file, split_tree.getObjID(file)) && !merge_tree.has(file)) {
+                    Index.delIndex(file);
+                }
+
+                if (merge_tree.has(file) && current_tree.has(file)) {
+                    String merge_BID = merge_tree.getObjID(file);
+                    String current_BID = current_tree.getObjID(file);
+                    // have been modified in the given branch since the split point, not modified in the current branch.
+                    // TODO: changed their version in the given branch and staged.
+                    if (!merge_tree.has(file, split_BID) && current_tree.has(file, split_BID)) {
+                        checkout("", merge_OID, "--", file);
+                        Index.addIndex(join(CWD, file));
+                    }
+                    if (!merge_BID.equals(split_BID) && !current_BID.equals(split_BID) && !merge_BID.equals(current_BID)) {
+                        Blob merge_blob = readObject(join(OBJECTS_DIR, merge_BID), Blob.class);
+                        Blob current_blob = readObject(join(OBJECTS_DIR, current_BID), Blob.class);
+                        writeContents(join(CWD, file), contentsOfConflict(merge_blob.toString(), current_blob.toString()));
+                        Index.addIndex(join(CWD, file));
+                        System.out.println("Encountered a merge conflict.");
+                    }
+                } else if (merge_tree.has(file) && !current_tree.has(file)) {
+                    String merge_BID = merge_tree.getObjID(file);
+                    if (!merge_BID.equals(split_BID)) {
+                        Blob merge_blob = readObject(join(OBJECTS_DIR, merge_BID), Blob.class);
+                        writeContents(join(CWD, file), contentsOfConflict("", merge_blob.toString()));
+                        Index.addIndex(join(CWD, file));
+                        System.out.println("Encountered a merge conflict.");
+                    }
+                } else if (current_tree.has(file) && !merge_tree.has(file)) {
+                    String current_BID = current_tree.getObjID(file);
+                    if (!current_BID.equals(split_BID)) {
+                        Blob current_blob = readObject(join(OBJECTS_DIR, current_BID), Blob.class);
+                        writeContents(join(CWD, file), contentsOfConflict(current_blob.toString(), ""));
+                        Index.addIndex(join(CWD, file));
+                        System.out.println("Encountered a merge conflict.");
+                    }
+                }
+            }
+
+            String[] parent = {getHeadCommitID(), getCommitIDByRef(branch)};
+            String message = "Merged " + branch +" into " + getHeadRef() +".";
+            // generate new root tree.
+            Tree root = Index.generateCommitTree();
+            // new commit
+            Commit merge_commit = new Commit(parent, message, root);
+            String objID = addObjToDatabase(merge_commit);
+            setHeadCommitID(objID);
+            // clean the stage-area.
+            Index.clearIndex();
         }
+    }
+
+    private static String contentsOfConflict(String current, String merge) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("<<<<<<< HEAD").append("\n");
+        builder.append(current);
+        builder.append("=======").append("\n");
+        builder.append(merge);
+        builder.append(">>>>>>>");
+        return builder.toString();
     }
 
     /**
