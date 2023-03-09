@@ -212,11 +212,26 @@ public class Repository {
     public static void global_log() {
         validateRepo();
 
-         BranchGraph graph = generateBranchGraph();
-         Set<String> set = graph.allCommit();
-         for (String OID : set) {
+        List<String> branches = plainFilenamesIn(BRANCHES_DIR);
+        Set<String> set = new HashSet<>();
+        if (branches != null) {
+            for (String ref : branches) {
+                String OID = getCommitIDByRef(ref);
+                while (OID != null) {
+                    Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
+                    set.add(OID);
+                    if (commit.getParent() != null) {
+                        OID = commit.getParent()[0];
+                    } else {
+                        OID = null;
+                    }
+                }
+            }
+        }
+
+        for (String OID : set) {
             logPrinter(OID);
-         }
+        }
     }
 
     private static void logPrinter(String OID) {
