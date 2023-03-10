@@ -212,10 +212,28 @@ public class Repository {
     public static void global_log() {
         validateRepo();
 
-        Set<String> set = allValidCommits();
+        //Set<String> set = allValidCommits();
+        Set<String> set = new HashSet<>();
+        String head_CID = getHeadCommitID();
+        globalLogHelper(head_CID, set);
 
-        for (String OID : set) {
-            logPrinter(OID);
+        for (String CID : set) {
+            logPrinter(CID);
+        }
+    }
+
+    private static void globalLogHelper(String CID, Set<String> set) {
+        if (CID == null) {
+            return;
+        } else {
+            set.add(CID);
+            Commit commit = readObject(join(OBJECTS_DIR, CID), Commit.class);
+            String[] parent = commit.getParent();
+            if (parent != null) {
+                for (String p : parent) {
+                    globalLogHelper(p, set);
+                }
+            }
         }
     }
 
