@@ -227,7 +227,7 @@ public class Repository {
             StringBuilder builder = new StringBuilder();
             builder.append("Merge: ");
             for (String str : commit.getParent()) {
-                builder.append(shortenOID(str)).append(" ");
+                builder.append(shortenOID(str, 7)).append(" ");
             }
             System.out.println(builder);
         }
@@ -865,8 +865,8 @@ public class Repository {
      */
     public static Commit getCommitByID(String ID) {
         File obj_f;
-        if (ID.length() == 6 && completeOID(ID) != null) {
-            obj_f = join(OBJECTS_DIR, completeOID(ID));
+        if (ID.length() == 6 && completeOID(ID, 6) != null) {
+            obj_f = join(OBJECTS_DIR, completeOID(ID, 6));
         } else {
             obj_f = join(OBJECTS_DIR, ID);
         }
@@ -905,18 +905,18 @@ public class Repository {
     /**
      * Returns shorten Object ID.
      */
-    public static String shortenOID(String OID) {
-        return OID.substring(0, 6);
+    public static String shortenOID(String OID, int length) {
+        return OID.substring(0, length);
     }
 
     /**
      * Returns the complete Object ID by short Object ID.
      */
-    public static String completeOID(String shortOID) {
+    public static String completeOID(String shortOID, int length) {
         List<String> list = plainFilenamesIn(OBJECTS_DIR);
         if (list != null) {
             for (String filename : list) {
-                if (filename.substring(0, 6).equals(shortOID)) {
+                if (filename.substring(0, length).equals(shortOID)) {
                     return filename;
                 }
             }

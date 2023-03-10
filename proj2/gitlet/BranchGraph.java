@@ -40,9 +40,9 @@ public class BranchGraph {
     public String toString() {
         StringBuilder builder = new StringBuilder();
         for (String s : adjMap.keySet()) {
-            builder.append(Repository.shortenOID(s)).append("-->");
+            builder.append(Repository.shortenOID(s, 7)).append("-->");
             for (String p : adjMap.get(s)) {
-                builder.append(Repository.shortenOID(p)).append(" ");
+                builder.append(Repository.shortenOID(p, 7)).append(" ");
             }
             builder.append("\n");
         }
