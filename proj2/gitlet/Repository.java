@@ -261,12 +261,22 @@ public class Repository {
     public static void find(String message) {
         validateRepo();
 
-        Set<String> all = allValidCommits();
+//        Set<String> all = allValidCommits();
+//        Set<String> set = new HashSet<>();
+//        for (String OID : all) {
+//            Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
+//            if (commit.getMessage().contains(message)) {
+//                set.add(OID);
+//            }
+//        }
+        String head_CID = getHeadCommitID();
         Set<String> set = new HashSet<>();
-        for (String OID : all) {
-            Commit commit = readObject(join(OBJECTS_DIR, OID), Commit.class);
+        Set<String> all = new HashSet<>();
+        globalLogHelper(head_CID, all);
+        for (String CID : all) {
+            Commit commit = readObject(join(OBJECTS_DIR, CID), Commit.class);
             if (commit.getMessage().contains(message)) {
-                set.add(OID);
+                set.add(CID);
             }
         }
 
@@ -476,6 +486,10 @@ public class Repository {
      */
     public static void merge(String branch) {
         validateBranch(branch);
+        if (getHeadRef().equals(branch)) {
+            System.out.println("Cannot merge a branch with itself.");
+            System.exit(0);
+        }
 
         String head_CID = getHeadCommitID();
         String merge_CID = getCommitIDByRef(branch);
@@ -505,6 +519,10 @@ public class Repository {
             // checked out and staged.
             for (String file : merge_tree) {
                 if (!split_tree.has(file) && !head_tree.has(file)) {
+                    if (join(CWD, file).exists()) {
+                        System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                        System.exit(0);
+                    }
                     checkout("", merge_CID, "--", file);
                     Index.addIndex(join(CWD, file));
                 }
@@ -883,8 +901,8 @@ public class Repository {
      */
     public static Commit getCommitByID(String ID) {
         File obj_f;
-        if (ID.length() == 6 && completeOID(ID, 6) != null) {
-            obj_f = join(OBJECTS_DIR, completeOID(ID, 6));
+        if (completeOID(ID) != null) {
+            obj_f = join(OBJECTS_DIR, completeOID(ID));
         } else {
             obj_f = join(OBJECTS_DIR, ID);
         }
@@ -930,11 +948,11 @@ public class Repository {
     /**
      * Returns the complete Object ID by short Object ID.
      */
-    public static String completeOID(String shortOID, int length) {
+    public static String completeOID(String shortOID) {
         List<String> list = plainFilenamesIn(OBJECTS_DIR);
         if (list != null) {
             for (String filename : list) {
-                if (filename.substring(0, length).equals(shortOID)) {
+                if (filename.startsWith(shortOID)) {
                     return filename;
                 }
             }
